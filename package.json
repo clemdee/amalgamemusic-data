@@ -1,0 +1,12 @@
+{
+  "name": "music-pipeline",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.0.0",
+  "dependencies": {
+    "zx": "^8.0.0"
+  },
+  "scripts": {
+    "process": "zx scripts/process.mjs"
+  }
+}

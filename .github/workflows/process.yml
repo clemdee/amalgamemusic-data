@@ -1,0 +1,36 @@
+name: Process Music
+
+on:
+  push:
+    paths:
+      - "raw/**"
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+      - uses: pnpm/action-setup@v4
+
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run music pipeline
+        run: pnpm process
+
+      - name: Commit generated files
+        run: |
+          git config user.name "music-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add data discography.json
+          git diff --cached --quiet || git commit -m "Auto process music"
+          git push

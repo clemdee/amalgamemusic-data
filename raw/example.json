@@ -1,0 +1,11 @@
+[
+  {
+    "id": "example",
+    "title": "example",
+    "tags": ["example"],
+    "time": {
+      "loopStart": 0,
+      "loopEnd": 100
+    }
+  }
+]
