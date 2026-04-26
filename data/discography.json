@@ -1,0 +1,512 @@
+[
+  {
+    "id": "u81",
+    "title": "Unintentional",
+    "tags": ["electro"],
+    "src": "/data/u81/u81.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 52.187506,
+      "loopEnd": 45.71
+    }
+  },
+  {
+    "id": "u121",
+    "title": "Deep Forest",
+    "tags": ["electro", "chill", ".highlight:1"],
+    "src": "/data/u121/u121.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 64.015624,
+      "loopEnd": 64.00
+    }
+  },
+  {
+    "id": "u142",
+    "title": "Balcony",
+    "tags": ["VGM", "8bit", "cover"],
+    "src": "/data/u142/u142.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 15.974263,
+      "loopEnd": 14.11
+    }
+  },
+  {
+    "id": "u151",
+    "title": "Deserted Battlefield",
+    "tags": ["VGM"],
+    "src": "/data/u151/u151_2.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 56.127143,
+      "loopEnd": 49.23
+    }
+  },
+  {
+    "id": "u152",
+    "title": "Toy Store",
+    "tags": ["VGM", "electro"],
+    "src": "/data/u152/u152.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 69.787937,
+      "loopEnd": 68.57
+    }
+  },
+  {
+    "id": "u203",
+    "title": "Floating Islands",
+    "tags": ["VGM", "electro", "chill", ".highlight:2"],
+    "src": "/data/u203/u203.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 46.041678,
+      "loopEnd": 32.00
+    }
+  },
+  {
+    "id": "u209",
+    "title": "Lamentation",
+    "tags": ["8bit"],
+    "src": "/data/u209/u209.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 18.130907,
+      "loopEnd": 18.11
+    }
+  },
+  {
+    "id": "u226",
+    "title": "Alien Barroco",
+    "tags": ["experimental", "baroque", ".highlight:1"],
+    "src": "/data/u226/u226.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 51.185737,
+      "loopStart": 8.97,
+      "loopEnd": 44.86
+    }
+  },
+  {
+    "id": "u240",
+    "title": "Warping Thoughts",
+    "tags": ["electro"],
+    "src": "/data/u240/u240.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 25.227937,
+      "loopEnd": 22.58
+    }
+  },
+  {
+    "id": "u241",
+    "title": "Funk it up!",
+    "tags": ["electro", "funk", "solo-playground"],
+    "src": "/data/u241/u241.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 85.351859,
+      "loopEnd": 85.33
+    }
+  },
+  {
+    "id": "u242",
+    "title": "Fragile Equilibrium",
+    "tags": ["electro", "experimental"],
+    "src": "/data/u242/u242.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 57.611610,
+      "loopEnd": 54.85
+    }
+  },
+  {
+    "id": "u246",
+    "title": "Scratch Battle!",
+    "tags": ["electro", "hiphop", "experimental"],
+    "src": "/data/u246/u246.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 78.562494,
+      "loopEnd": 76.80
+    }
+  },
+  {
+    "id": "5",
+    "title": "Short Turnabout",
+    "tags": ["classical"],
+    "src": "/data/5/5_2.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 40.760612,
+      "loopStart": 13.58,
+      "loopEnd": 27.17
+    },
+    "parts": [
+      {
+        "src": "/data/5/5_2_start.opus",
+        "duration": 24.374989
+      },
+      {
+        "src": "/data/5/5_2_loop.opus",
+        "offset": 13.58,
+        "duration": 24.374989
+      },
+      {
+        "src": "/data/5/5_2_end.opus",
+        "offset": 27.17,
+        "duration": 13.590794
+      }
+    ]
+  },
+  {
+    "id": "13",
+    "title": "Life's a surfboard",
+    "tags": ["funk", "jazz", ".highlight:1"],
+    "src": "/data/13/13_15.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 161.768866,
+      "loopStart": 9.03,
+      "loopEnd": 153.96
+    }
+  },
+  {
+    "id": "35",
+    "title": "Droplets",
+    "tags": ["electro", "chill", "solo-playground"],
+    "src": "/data/35/35.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 19.879456,
+      "loopEnd": 13.71
+    }
+  },
+  {
+    "id": "38",
+    "title": "Help",
+    "tags": ["breakcore", "experimental"],
+    "src": "/data/38/38_10.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 211.494853
+    }
+  },
+  {
+    "id": "39",
+    "title": "Odd Reflection",
+    "tags": ["experimental"],
+    "src": "/data/39/39_14.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 149.536463,
+      "loopEnd": 149.25
+    }
+  },
+  {
+    "id": "42",
+    "title": "Must go on",
+    "tags": ["electro", "VGM", ".highlight:1"],
+    "src": "/data/42/42_5.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 48.702200,
+      "loopEnd": 45.17
+    }
+  },
+  {
+    "id": "56",
+    "title": "Big Dropper",
+    "tags": ["electro"],
+    "src": "/data/56/56_14.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 172.181655,
+      "loopEnd": 165.39
+    }
+  },
+  {
+    "id": "58",
+    "title": "Critical Level",
+    "tags": ["electro"],
+    "src": "/data/58/58.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 69.250000,
+      "loopEnd": 59.07
+    }
+  },
+  {
+    "id": "59",
+    "title": "Electric Heat",
+    "tags": ["electro", "funk", "solo-playground"],
+    "src": "/data/59/59_3.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 91.089592,
+      "loopEnd": 87.08
+    }
+  },
+  {
+    "id": "66",
+    "title": "Owen was Who?",
+    "tags": ["cover"],
+    "src": "/data/66/66.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 127.059433
+    }
+  },
+  {
+    "id": "78",
+    "title": "An Old Fellow",
+    "tags": ["electro", "funk", "solo-playground"],
+    "src": "/data/78/78_20.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 242.472834
+    }
+  },
+  {
+    "id": "79",
+    "title": "Time deprivation",
+    "tags": ["chill", ".highlight:1"],
+    "src": "/data/79/79_3.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 95.788844,
+      "loopEnd": 93.20
+    }
+  },
+  {
+    "id": "87",
+    "title": "Emray",
+    "tags": ["electro"],
+    "src": "/data/87/87_8.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 86.874989,
+      "loopEnd": 77.53
+    }
+  },
+  {
+    "id": "89",
+    "title": "Japanese Opening",
+    "tags": ["rock", "mockup"],
+    "src": "/data/89/89_8.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 270.427642,
+      "loopStart": 1.26,
+      "loopEnd": 266.52
+    }
+  },
+  {
+    "id": "94",
+    "title": "Young Gods",
+    "tags": ["mockup", "jazz", "fusion", "solo-playground"],
+    "src": "/data/94/94_11.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 263.115737
+    }
+  },
+  {
+    "id": "97",
+    "title": "Heat of the night",
+    "tags": ["mockup", "jazz", "fusion"],
+    "src": "/data/97/97_11.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 238.835011
+    }
+  },
+  {
+    "id": "114",
+    "title": "Victory!",
+    "tags": ["VGM", ".highlight:2"],
+    "src": "/data/114/114.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 21.129819,
+      "loopEnd": 14.76
+    }
+  },
+  {
+    "id": "130",
+    "title": "Cool Louis",
+    "tags": ["funk", "electro", ".highlight:3"],
+    "src": "/data/130/130_7.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 105.021746,
+      "loopEnd": 100.17
+    }
+  },
+  {
+    "id": "139",
+    "title": "Plucking it Away",
+    "tags": ["electro", "funk"],
+    "src": "/data/139/139_2.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 56.301655,
+      "loopEnd": 51.57
+    }
+  },
+  {
+    "id": "144",
+    "title": "Sometimes in life not everything goes as planned and that's okay",
+    "tags": ["electro", "experimental"],
+    "src": "/data/144/144_2.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 108.477687,
+      "loopStart": 34.28,
+      "loopEnd": 102.85
+    },
+    "parts": [
+      {
+        "src": "/data/144/144_2_start.opus",
+        "duration": 40.133923
+      },
+      {
+        "src": "/data/144/144_2_loop.opus",
+        "offset": 34.28,
+        "duration": 74.205351
+      }
+    ]
+  },
+  {
+    "id": "145",
+    "title": "Obnoxious Emotions",
+    "tags": ["breakcore", "experimental"],
+    "src": "/data/145/145_2.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 110.583333,
+      "loopEnd": 106.83
+    }
+  },
+  {
+    "id": "146",
+    "title": "Confrontation",
+    "tags": ["VGM", "solo-playground", ".highlight:1"],
+    "src": "/data/146/146_2.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 85.159773,
+      "loopEnd": 72.18
+    }
+  },
+  {
+    "id": "154",
+    "title": "New Lands",
+    "tags": ["VGM", "classical", ".highlight:2"],
+    "src": "/data/154/154_2.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 47.301474,
+      "loopEnd": 45.17
+    }
+  },
+  {
+    "id": "157",
+    "title": "Prove of Concept",
+    "tags": ["electro", ".highlight:2"],
+    "src": "/data/157/157_7.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 128.672472
+    }
+  },
+  {
+    "id": "162",
+    "title": "Move-out Jamming",
+    "tags": ["jazz"],
+    "src": "/data/162/162.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 101.195057,
+      "loopEnd": 100.22
+    }
+  },
+  {
+    "id": "165",
+    "title": "Paulo",
+    "tags": ["samba", "solo-playground"],
+    "src": "/data/165/165.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 35.958685,
+      "loopEnd": 32.56
+    }
+  },
+  {
+    "id": "171",
+    "title": "Sacred Woods",
+    "tags": ["classical"],
+    "src": "/data/171/171.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 78.801701,
+      "loopEnd": 75.78
+    }
+  },
+  {
+    "id": "175",
+    "title": "Unhinged Experiment",
+    "tags": ["electro", ".highlight:1"],
+    "src": "/data/175/175_7.opus",
+    "uploadTime": "2025-11-26",
+    "time": {
+      "duration": 101.467574,
+      "loopEnd": 97.21
+    }
+  },
+  {
+    "id": "177",
+    "title": "Bramble Blast",
+    "tags": ["chill", "cover"],
+    "src": "/data/177/177_4.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 102.563197,
+      "loopEnd": 75.50
+    }
+  },
+  {
+    "id": "184",
+    "title": "Plucking the night",
+    "tags": ["electro", "funk", ".highlight:1"],
+    "src": "/data/184/184_3.opus",
+    "uploadTime": "2025-07-21",
+    "time": {
+      "duration": 71.759025,
+      "loopEnd": 59.43
+    },
+    "parts": [
+      {
+        "src": "/data/184/184_3_loop.opus",
+        "duration": 70.792517
+      },
+      {
+        "src": "/data/184/184_3_end.opus",
+        "offset": 59.43,
+        "duration": 11.436848
+      }
+    ]
+  },
+  {
+    "id": "193",
+    "title": "Midnight Beats",
+    "tags": ["electro", "classical", ".highlight:2"],
+    "src": "/data/193/193_5.opus",
+    "uploadTime": "2025-11-26",
+    "time": {
+      "duration": 68.024354,
+      "loopEnd": 65.08
+    }
+  }
+]
