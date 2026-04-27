@@ -2,17 +2,96 @@
 
 import 'zx/globals';
 
+interface RawMusicPart {
+  name: string
+  offset?: number
+}
+
+interface MusicPart {
+  name: string
+  src: string
+  offset?: number
+  duration: number
+}
+
+interface RawMusicMetadata {
+  id: string
+  title: string
+  uploadTime?: string
+  time?: {
+    loopStart?: number
+    loopEnd?: number
+  }
+  parts?: RawMusicPart[]
+  tags?: string[]
+};
+
+interface MusicMetadata {
+  id: string
+  version?: number
+  title: string
+  src: string
+  uploadTime: string
+  updateTime: string
+  time: {
+    duration: number
+    loopStart?: number
+    loopEnd?: number
+  }
+  parts?: MusicPart[]
+  tags?: string[]
+};
+
+interface FileMetadata {
+  fileName: string
+  base: string
+  id: string
+  version: number
+  partName: string
+  ext: string
+}
+
+interface AutoMetadata {
+    version: number
+    main?: FileMetadata
+    parts: Map<string, FileMetadata>
+}
+
 const RAW_DIR = 'raw';
 const DATA_DIR = 'data';
 const RAW_DISCO_FILE = path.join(RAW_DIR, 'discography.json');
 const CURRENT_DISCO_FILE = path.join(DATA_DIR, 'discography.json');
 
-function stringify (json) {
+await fs.mkdir(DATA_DIR, { recursive: true });
+
+const tryReadJson = async <T = any>(filePath: string, fallback: T): Promise<T> => {
+  try {
+    const raw = await fs.readFile(filePath, 'utf8');
+    return JSON.parse(raw) as T;
+  } catch (err: any) {
+    if (err?.code === 'ENOENT') return fallback;
+    throw err;
+  }
+}
+
+const currentDiscography = await tryReadJson<MusicMetadata[]>(CURRENT_DISCO_FILE, []);
+const rawDiscography = await tryReadJson<RawMusicMetadata[]>(RAW_DISCO_FILE, []);
+
+const currentMetadataMap = new Map<string, MusicMetadata>(currentDiscography.map((item) => [item.id, item]));
+const rawMetadataMap = new Map<string, RawMusicMetadata>(rawDiscography.map((item) => [item.id, item]));
+const autoMetadataMap = new Map();
+
+
+function now () {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function stringify (json: any) {
   if (!json) return '';
   return JSON.stringify(json, null, 2) + '\n';
 }
 
-async function printDiff (string1, string2, noDiffMessage = '') {
+async function printDiff (string1: any, string2: any, noDiffMessage = '') {
   const tmp1 = tmpfile('tmp1.json', stringify(string1));
   const tmp2 = tmpfile('tmp2.json', stringify(string2));
   const diff = await $`diff --color=always --unified=100 -Z ${tmp1} ${tmp2}`.nothrow();
@@ -24,21 +103,11 @@ async function printDiff (string1, string2, noDiffMessage = '') {
   }
 }
 
-function isAudioFile (file) {
+function isAudioFile (file: any) {
   return file.isFile() && !file.name.endsWith('.json');
 }
 
-async function tryReadJson (filePath, fallback) {
-  try {
-    const raw = await fs.readFile(filePath, 'utf8');
-    return JSON.parse(raw);
-  } catch (err) {
-    if (err?.code === 'ENOENT') return fallback;
-    throw err;
-  }
-}
-
-async function parseRawFileMetadata (fileName) {
+function parseRawFileMetadata (fileName: string): FileMetadata {
   const regex = /^(?<base>(?<id>[^_.]*)(?:_(?<version>\d*))?(?:_(?<partName>[^_.]*))?)\.(?<ext>.*?)$/;
   const { base, id, version, partName, ext } = fileName.match(regex)?.groups ?? {};
   return {
@@ -51,28 +120,19 @@ async function parseRawFileMetadata (fileName) {
   };
 }
 
-async function ffprobeDuration (filePath) {
+async function ffprobeDuration (filePath: string) {
   const { stdout } = await $`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 ${filePath}`;
   return Number(stdout.trim());
 }
 
-async function convertToOpus (inputPath, outputPath) {
+async function convertToOpus (inputPath: string, outputPath: string) {
   await fs.mkdir(path.dirname(outputPath), { recursive: true });
   console.log(`Converting ${inputPath}`, 'to opus format');
   await $`ffmpeg -y -loglevel error -stats -i ${inputPath} -map_metadata -1 -c:a libopus -b:a 160k ${outputPath}`;
 }
 
-await fs.mkdir(DATA_DIR, { recursive: true });
-
-const currentDiscography = await tryReadJson(CURRENT_DISCO_FILE, []);
-const rawDiscography = await tryReadJson(RAW_DISCO_FILE, []);
-
-const currentMetadataMap = new Map(currentDiscography.map((item) => [item.id, item]));
-const rawMetadataMap = new Map(rawDiscography.map((item) => [item.id, item]));
-const autoMetadataMap = new Map();
-
-const updateAutoMetadata = (rawFileMetadata) => {
-  const autoMetadata = autoMetadataMap.get(rawFileMetadata.id) ?? {
+const updateAutoMetadata = (rawFileMetadata: FileMetadata) => {
+  const autoMetadata: AutoMetadata = autoMetadataMap.get(rawFileMetadata.id) ?? {
     version: -1,
     main: undefined,
     parts: new Map(),
@@ -87,21 +147,15 @@ const updateAutoMetadata = (rawFileMetadata) => {
   }
 
   if (rawFileMetadata.partName) {
-    autoMetadata.parts.set(rawFileMetadata.partName, {
-      fileName: rawFileMetadata.fileName,
-      ...rawFileMetadata,
-    });
+    autoMetadata.parts.set(rawFileMetadata.partName, rawFileMetadata);
   }
   else{
-    autoMetadata.main = {
-      fileName: rawFileMetadata.fileName,
-      ...rawFileMetadata,
-    };
+    autoMetadata.main = rawFileMetadata;
   }
   autoMetadataMap.set(rawFileMetadata.id, autoMetadata);
 }
 
-const sortAutoMetadata = (autoMetadataMap) => {
+const sortAutoMetadata = (autoMetadataMap: Map<string, AutoMetadata>) => {
   const orderedAutoMetadata = [];
 
   // 1) existing tracks keep current order
@@ -132,7 +186,7 @@ const rawFiles = await fs.readdir(RAW_DIR, { withFileTypes: true });
 
 for (const rawFile of rawFiles) {
   if (!isAudioFile(rawFile)) continue;
-  const rawFileMetadata = await parseRawFileMetadata(rawFile.name);
+  const rawFileMetadata = parseRawFileMetadata(rawFile.name);
   updateAutoMetadata(rawFileMetadata);
 }
 
@@ -149,7 +203,7 @@ for (const autoMetadata of sortedAutoMetadata) {
   const outputDir = path.join(DATA_DIR, autoMetadata.main.id);
   const outputPath = path.join(outputDir, `${autoMetadata.main.base}.opus`);
 
-  const rawMetadata = rawMetadataMap.get(autoMetadata.main.id) ?? {};
+  const rawMetadata = rawMetadataMap.get(autoMetadata.main.id);
   const currentMetadata = currentMetadataMap.get(autoMetadata.main.id);
   const currentVersion = Number(currentMetadata?.version ?? 0);
   if (autoMetadata.main.version < currentVersion) continue;
@@ -157,18 +211,18 @@ for (const autoMetadata of sortedAutoMetadata) {
   await convertToOpus(inputPath, outputPath);
   const duration = await ffprobeDuration(outputPath);
 
-  let resolvedParts = [];
+  let resolvedParts = [] as MusicPart[];
   if (autoMetadata.parts.size > 0) {
     const orderedParts = [];
 
-    for (const rawPart of rawMetadata.parts) {
+    for (const rawPart of rawMetadata?.parts ?? []) {
       const partAuto = autoMetadata.parts.get(rawPart.name);
       if (!partAuto) continue;
       orderedParts.push({ rawPart, partAuto });
     }
 
     for (const [name, partAuto] of autoMetadata.parts) {
-      if (rawMetadata.parts?.some(p => p.name === name)) continue;
+      if (rawMetadata?.parts?.some(p => p.name === name)) continue;
       orderedParts.push({ rawPart: {}, partAuto });
     }
 
@@ -184,7 +238,7 @@ for (const autoMetadata of sortedAutoMetadata) {
       await convertToOpus(partInput, partOutput);
       const partDuration = await ffprobeDuration(partOutput);
 
-      const resolvedPart = {};
+      const resolvedPart = {} as MusicPart;
       resolvedPart.src = `/data/${autoMetadata.main.id}/${partAuto.base}.opus`;
       if (rawPart.offset) resolvedPart.offset = rawPart.offset;
       resolvedPart.duration = partDuration;
@@ -192,17 +246,17 @@ for (const autoMetadata of sortedAutoMetadata) {
     }
   }
 
-  const id = autoMetadata.main.id;
-  const version = Math.max(currentVersion, autoMetadata.main.version);
-  const title = rawMetadata.title ?? currentMetadata?.title ?? autoMetadata.main.id;
-  const tags = rawMetadata.tags ?? currentMetadata?.tags ?? [];
-  const src = `/data/${autoMetadata.main.id}/${autoMetadata.main.base}.opus`;
-  const uploadTime = rawMetadata.uploadTime ?? currentMetadata?.uploadTime ?? new Date().toISOString().slice(0, 10);
-  const updateTime = new Date().toISOString().slice(0, 10);
-  const loopStart = rawMetadata?.time?.loopStart ?? currentMetadata?.time?.loopStart ?? 0;
-  const loopEnd = rawMetadata?.time?.loopEnd ?? currentMetadata?.time?.loopEnd ?? duration;
+  const id: MusicMetadata['id'] = autoMetadata.main.id;
+  const version: MusicMetadata['version'] = Math.max(currentVersion, autoMetadata.main.version);
+  const title: MusicMetadata['title'] = rawMetadata?.title ?? currentMetadata?.title ?? autoMetadata.main.id;
+  const tags: MusicMetadata['tags'] = rawMetadata?.tags ?? currentMetadata?.tags ?? [];
+  const src: MusicMetadata['src'] = `/data/${autoMetadata.main.id}/${autoMetadata.main.base}.opus`;
+  const uploadTime: MusicMetadata['uploadTime'] = rawMetadata?.uploadTime ?? currentMetadata?.uploadTime ?? now();
+  const updateTime: MusicMetadata['updateTime'] = now();
+  const loopStart: MusicMetadata['time']['loopStart'] = rawMetadata?.time?.loopStart ?? currentMetadata?.time?.loopStart ?? 0;
+  const loopEnd: MusicMetadata['time']['loopEnd'] = rawMetadata?.time?.loopEnd ?? currentMetadata?.time?.loopEnd ?? duration;
 
-  const merged = {}
+  const merged = {} as MusicMetadata;
   merged.id = id;
   if (version !== 0) merged.version = version;
   merged.title = title;
