@@ -1,4 +1,6 @@
-#!/usr/bin/env node
+#!/usr/bin/env zx
+
+import 'zx/globals';
 
 const RAW_DIR = 'raw';
 const DATA_DIR = 'data';
