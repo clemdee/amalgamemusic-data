@@ -83,16 +83,16 @@ const rawMetadataMap = new Map<string, RawMusicMetadata>(rawDiscography.map((ite
 const autoMetadataMap = new Map();
 
 
-function now () {
+const now = () => {
   return new Date().toISOString().slice(0, 10);
 }
 
-function stringify (json: any) {
+const stringify = (json: any) => {
   if (!json) return '';
   return JSON.stringify(json, null, 2) + '\n';
 }
 
-async function printDiff (string1: any, string2: any, noDiffMessage = '') {
+const printDiff = async (string1: any, string2: any, noDiffMessage = '') => {
   const tmp1 = tmpfile('tmp1.json', stringify(string1));
   const tmp2 = tmpfile('tmp2.json', stringify(string2));
   const diff = await $`diff --color=always --unified=100 -Z ${tmp1} ${tmp2}`.nothrow();
@@ -104,11 +104,22 @@ async function printDiff (string1: any, string2: any, noDiffMessage = '') {
   }
 }
 
-function isAudioFile (file: Dirent<string>) {
+const isAudioFile = (file: Dirent<string>) => {
   return file.isFile() && !file.name.endsWith('.json');
 }
 
-function parseRawFileMetadata (fileName: string): FileMetadata {
+const ffprobeDuration = async (filePath: string) => {
+  const { stdout } = await $`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 ${filePath}`;
+  return Number(stdout.trim());
+}
+
+const convertToOpus = async (inputPath: string, outputPath: string) => {
+  await fs.mkdir(path.dirname(outputPath), { recursive: true });
+  console.log(`Converting ${inputPath}`, 'to opus format');
+  await $`ffmpeg -y -loglevel error -stats -i ${inputPath} -map_metadata -1 -c:a libopus -b:a 160k ${outputPath}`;
+}
+
+const parseRawFileMetadata = (fileName: string): FileMetadata => {
   const regex = /^(?<base>(?<id>[^_.]*)(?:_(?<version>\d*))?(?:_(?<partName>[^_.]*))?)\.(?<ext>.*?)$/;
   const { base, id, version, partName, ext } = fileName.match(regex)?.groups ?? {};
   return {
@@ -119,17 +130,6 @@ function parseRawFileMetadata (fileName: string): FileMetadata {
     partName,
     ext
   };
-}
-
-async function ffprobeDuration (filePath: string) {
-  const { stdout } = await $`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 ${filePath}`;
-  return Number(stdout.trim());
-}
-
-async function convertToOpus (inputPath: string, outputPath: string) {
-  await fs.mkdir(path.dirname(outputPath), { recursive: true });
-  console.log(`Converting ${inputPath}`, 'to opus format');
-  await $`ffmpeg -y -loglevel error -stats -i ${inputPath} -map_metadata -1 -c:a libopus -b:a 160k ${outputPath}`;
 }
 
 const updateAutoMetadata = (rawFileMetadata: FileMetadata) => {
@@ -157,31 +157,78 @@ const updateAutoMetadata = (rawFileMetadata: FileMetadata) => {
 }
 
 const sortAutoMetadata = (autoMetadataMap: Map<string, AutoMetadata>) => {
-  const orderedAutoMetadata = [];
+  const sortedAutoMetadata = [];
 
   // 1) existing tracks keep current order
   for (const item of currentDiscography) {
-    const group = autoMetadataMap.get(item.id);
-    if (group) orderedAutoMetadata.push(group);
+    const autoMetadata = autoMetadataMap.get(item.id);
+    if (autoMetadata) sortedAutoMetadata.push(autoMetadata);
   }
 
   // 2) new tracks follow raw discography order
   for (const item of rawDiscography) {
     if (currentMetadataMap.has(item.id)) continue;
-    const group = autoMetadataMap.get(item.id);
-    if (group) orderedAutoMetadata.push(group);
+    const autoMetadata = autoMetadataMap.get(item.id);
+    if (autoMetadata) sortedAutoMetadata.push(autoMetadata);
   }
 
   // 3) orphan tracks (not listed in raw) go last
   for (const [id, group] of autoMetadataMap) {
     if (currentMetadataMap.has(id)) continue;
     if (rawMetadataMap.has(id)) continue;
-    orderedAutoMetadata.push(group);
+    sortedAutoMetadata.push(group);
   }
 
-  return orderedAutoMetadata;
+  return sortedAutoMetadata;
 }
 
+const sortAutoPartMetadata = (rawMetadata: RawMusicMetadata | undefined, autoMetadata: AutoMetadata) => {
+    const sortedParts = [];
+
+    for (const rawPart of rawMetadata?.parts ?? []) {
+      const partAuto = autoMetadata.parts.get(rawPart.name);
+      if (!partAuto) continue;
+      sortedParts.push({ rawPart, partAuto });
+    }
+
+    for (const [name, partAuto] of autoMetadata.parts) {
+      if (rawMetadata?.parts?.some(p => p.name === name)) continue;
+      sortedParts.push({ rawPart: {} as RawMusicPart, partAuto });
+    }
+    return sortedParts;
+}
+
+const processMusicParts = async (rawMetadata: RawMusicMetadata | undefined, autoMetadata: AutoMetadata): Promise<MusicPart[]> => {
+  if (!autoMetadata.main) return [];
+  if (autoMetadata.parts.size === 0) return [];
+
+  let resolvedParts = [] as MusicPart[];
+
+  const sortedParts = sortAutoPartMetadata(rawMetadata, autoMetadata);
+
+  for (const { rawPart, partAuto } of sortedParts) {
+    console.log(
+      chalk.magenta('\n', '   >>> '),
+      chalk.black.bgCyan(partAuto.fileName, '\n'),
+    );
+
+    const partInput = path.join(RAW_DIR, partAuto.fileName);
+    const partOutput = path.join(DATA_DIR, autoMetadata.main.id, `${partAuto.base}.opus`);
+
+    await convertToOpus(partInput, partOutput);
+    const partDuration = await ffprobeDuration(partOutput);
+
+    const resolvedPart = {} as MusicPart;
+    resolvedPart.src = `/data/${autoMetadata.main.id}/${partAuto.base}.opus`;
+    if (rawPart.offset) resolvedPart.offset = rawPart.offset;
+    resolvedPart.duration = partDuration;
+    resolvedParts.push(resolvedPart);
+  }
+
+  return resolvedParts;
+}
+
+// ---
 
 const rawFiles = await fs.readdir(RAW_DIR, { withFileTypes: true });
 
@@ -200,52 +247,18 @@ for (const autoMetadata of sortedAutoMetadata) {
     chalk.black.bgCyan(autoMetadata.main.fileName, '\n'),
   );
 
-  const inputPath = path.join(RAW_DIR, autoMetadata.main.fileName);
-  const outputDir = path.join(DATA_DIR, autoMetadata.main.id);
-  const outputPath = path.join(outputDir, `${autoMetadata.main.base}.opus`);
-
   const rawMetadata = rawMetadataMap.get(autoMetadata.main.id);
   const currentMetadata = currentMetadataMap.get(autoMetadata.main.id);
   const currentVersion = Number(currentMetadata?.version ?? 0);
   if (autoMetadata.main.version < currentVersion) continue;
 
+  const inputPath = path.join(RAW_DIR, autoMetadata.main.fileName);
+  const outputPath = path.join(DATA_DIR, autoMetadata.main.id, `${autoMetadata.main.base}.opus`);
+
   await convertToOpus(inputPath, outputPath);
   const duration = await ffprobeDuration(outputPath);
 
-  let resolvedParts = [] as MusicPart[];
-  if (autoMetadata.parts.size > 0) {
-    const orderedParts = [];
-
-    for (const rawPart of rawMetadata?.parts ?? []) {
-      const partAuto = autoMetadata.parts.get(rawPart.name);
-      if (!partAuto) continue;
-      orderedParts.push({ rawPart, partAuto });
-    }
-
-    for (const [name, partAuto] of autoMetadata.parts) {
-      if (rawMetadata?.parts?.some(p => p.name === name)) continue;
-      orderedParts.push({ rawPart: {}, partAuto });
-    }
-
-    for (const { rawPart, partAuto } of orderedParts) {
-      console.log(
-        chalk.magenta('\n', '   >>> '),
-        chalk.black.bgCyan(partAuto.fileName, '\n'),
-      );
-
-      const partInput = path.join(RAW_DIR, partAuto.fileName);
-      const partOutput = path.join(DATA_DIR, autoMetadata.main.id, `${partAuto.base}.opus`);
-
-      await convertToOpus(partInput, partOutput);
-      const partDuration = await ffprobeDuration(partOutput);
-
-      const resolvedPart = {} as MusicPart;
-      resolvedPart.src = `/data/${autoMetadata.main.id}/${partAuto.base}.opus`;
-      if (rawPart.offset) resolvedPart.offset = rawPart.offset;
-      resolvedPart.duration = partDuration;
-      resolvedParts.push(resolvedPart);
-    }
-  }
+  let resolvedParts = await processMusicParts(rawMetadata, autoMetadata);
 
   const id: MusicMetadata['id'] = autoMetadata.main.id;
   const version: MusicMetadata['version'] = Math.max(currentVersion, autoMetadata.main.version);
