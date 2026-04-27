@@ -22,7 +22,11 @@ async function printDiff (string1, string2, noDiffMessage = '') {
   }
 }
 
-async function tryReadJson(filePath, fallback) {
+function isAudioFile (file) {
+  return file.isFile() && !file.name.endsWith('.json');
+}
+
+async function tryReadJson (filePath, fallback) {
   try {
     const raw = await fs.readFile(filePath, 'utf8');
     return JSON.parse(raw);
@@ -32,10 +36,11 @@ async function tryReadJson(filePath, fallback) {
   }
 }
 
-async function parseAutoMetadata(fileName) {
+async function parseRawFileMetadata (fileName) {
   const regex = /^(?<base>(?<id>[^_.]*)(?:_(?<version>\d*))?(?:_(?<partName>[^_.]*))?)\.(?<ext>.*?)$/;
   const { base, id, version, partName, ext } = fileName.match(regex)?.groups ?? {};
   return {
+    fileName,
     base,
     id,
     version: Number(version ?? 0),
@@ -44,12 +49,12 @@ async function parseAutoMetadata(fileName) {
   };
 }
 
-async function ffprobeDuration(filePath) {
+async function ffprobeDuration (filePath) {
   const { stdout } = await $`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 ${filePath}`;
   return Number(stdout.trim());
 }
 
-async function convertToOpus(inputPath, outputPath) {
+async function convertToOpus (inputPath, outputPath) {
   await fs.mkdir(path.dirname(outputPath), { recursive: true });
   console.log(`Converting ${inputPath}`, 'to opus format');
   await $`ffmpeg -y -loglevel error -stats -i ${inputPath} -map_metadata -1 -c:a libopus -b:a 160k ${outputPath}`;
@@ -62,97 +67,105 @@ const rawDiscography = await tryReadJson(RAW_DISCO_FILE, []);
 
 const currentMetadataMap = new Map(currentDiscography.map((item) => [item.id, item]));
 const rawMetadataMap = new Map(rawDiscography.map((item) => [item.id, item]));
+const autoMetadataMap = new Map();
 
-const rawFiles = await fs.readdir(RAW_DIR, { withFileTypes: true });
+const updateAutoMetadata = (rawFileMetadata) => {
+  const autoMetadata = autoMetadataMap.get(rawFileMetadata.id) ?? {
+    version: -1,
+    main: undefined,
+    parts: new Map(),
+  };
 
-// ===== GROUP FILES BY ID + VERSION =====
-const autoGroupedMetadataMap = new Map();
+  if (rawFileMetadata.version < autoMetadata.version) return;
 
-for (const rawFile of rawFiles) {
-  if (!rawFile.isFile() || rawFile.name.endsWith('.json')) continue;
-  const autoMetadata = await parseAutoMetadata(rawFile.name);
-
-  const group = autoGroupedMetadataMap.get(autoMetadata.id) ?? { version: -1, main: null, parts: new Map() };
-
-  if (autoMetadata.version < group.version) continue;
-
-  if (autoMetadata.version > group.version) {
-    group.version = autoMetadata.version;
-    group.main = null;
-    group.parts = new Map();
+  if (rawFileMetadata.version > autoMetadata.version) {
+    autoMetadata.version = rawFileMetadata.version;
+    autoMetadata.main = undefined;
+    autoMetadata.parts = new Map();
   }
 
-  if (autoMetadata.partName) {
-    group.parts.set(autoMetadata.partName, {
-      fileName: rawFile.name,
-      ...autoMetadata,
+  if (rawFileMetadata.partName) {
+    autoMetadata.parts.set(rawFileMetadata.partName, {
+      fileName: rawFileMetadata.fileName,
+      ...rawFileMetadata,
     });
   }
   else{
-    group.main = {
-      fileName: rawFile.name,
-      ...autoMetadata,
+    autoMetadata.main = {
+      fileName: rawFileMetadata.fileName,
+      ...rawFileMetadata,
     };
   }
-
-  autoGroupedMetadataMap.set(autoMetadata.id, group);
+  autoMetadataMap.set(rawFileMetadata.id, autoMetadata);
 }
 
-// ===== ORDER GROUPS BEFORE PROCESSING (NEW) =====
-const orderedGroups = [];
+const sortAutoMetadata = (autoMetadataMap) => {
+  const orderedAutoMetadata = [];
 
-// 1) existing tracks keep current order
-for (const item of currentDiscography) {
-  const group = autoGroupedMetadataMap.get(item.id);
-  if (group) orderedGroups.push(group);
+  // 1) existing tracks keep current order
+  for (const item of currentDiscography) {
+    const group = autoMetadataMap.get(item.id);
+    if (group) orderedAutoMetadata.push(group);
+  }
+
+  // 2) new tracks follow raw discography order
+  for (const item of rawDiscography) {
+    if (currentMetadataMap.has(item.id)) continue;
+    const group = autoMetadataMap.get(item.id);
+    if (group) orderedAutoMetadata.push(group);
+  }
+
+  // 3) orphan tracks (not listed in raw) go last
+  for (const [id, group] of autoMetadataMap) {
+    if (currentMetadataMap.has(id)) continue;
+    if (rawMetadataMap.has(id)) continue;
+    orderedAutoMetadata.push(group);
+  }
+
+  return orderedAutoMetadata;
 }
 
-// 2) new tracks follow raw discography order
-for (const item of rawDiscography) {
-  if (currentMetadataMap.has(item.id)) continue;
-  const group = autoGroupedMetadataMap.get(item.id);
-  if (group) orderedGroups.push(group);
+
+const rawFiles = await fs.readdir(RAW_DIR, { withFileTypes: true });
+
+for (const rawFile of rawFiles) {
+  if (!isAudioFile(rawFile)) continue;
+  const rawFileMetadata = await parseRawFileMetadata(rawFile.name);
+  updateAutoMetadata(rawFileMetadata);
 }
 
-// 3) orphan tracks (not listed in raw) go last
-for (const [id, group] of autoGroupedMetadataMap) {
-  if (currentMetadataMap.has(id)) continue;
-  if (rawMetadataMap.has(id)) continue;
-  orderedGroups.push(group);
-}
-
-for (const group of orderedGroups) {
-  if (!group.main) continue;
-  const autoMainMetadata = group.main;
+const sortedAutoMetadata = sortAutoMetadata(autoMetadataMap);
+for (const autoMetadata of sortedAutoMetadata) {
+  if (!autoMetadata.main) continue;
 
   console.log(
     chalk.magenta('\n', '>> '),
-    chalk.black.bgCyan(autoMainMetadata.fileName, '\n'),
+    chalk.black.bgCyan(autoMetadata.main.fileName, '\n'),
   );
 
-  const inputPath = path.join(RAW_DIR, autoMainMetadata.fileName);
-  const outputDir = path.join(DATA_DIR, autoMainMetadata.id);
-  const outputPath = path.join(outputDir, `${autoMainMetadata.base}.opus`);
+  const inputPath = path.join(RAW_DIR, autoMetadata.main.fileName);
+  const outputDir = path.join(DATA_DIR, autoMetadata.main.id);
+  const outputPath = path.join(outputDir, `${autoMetadata.main.base}.opus`);
 
-  const rawMetadata = rawMetadataMap.get(autoMainMetadata.id) ?? {};
-  const currentMetadata = currentMetadataMap.get(autoMainMetadata.id);
+  const rawMetadata = rawMetadataMap.get(autoMetadata.main.id) ?? {};
+  const currentMetadata = currentMetadataMap.get(autoMetadata.main.id);
   const currentVersion = Number(currentMetadata?.version ?? 0);
-  if (autoMainMetadata.version < currentVersion) continue;
+  if (autoMetadata.main.version < currentVersion) continue;
 
   await convertToOpus(inputPath, outputPath);
   const duration = await ffprobeDuration(outputPath);
 
   let resolvedParts = [];
-  if (group.parts.size > 0) {
+  if (autoMetadata.parts.size > 0) {
     const orderedParts = [];
 
     for (const rawPart of rawMetadata.parts) {
-      const partAuto = group.parts.get(rawPart.name);
+      const partAuto = autoMetadata.parts.get(rawPart.name);
       if (!partAuto) continue;
       orderedParts.push({ rawPart, partAuto });
     }
 
-    for (const [name, partAuto] of group.parts) {
+    for (const [name, partAuto] of autoMetadata.parts) {
       if (rawMetadata.parts?.some(p => p.name === name)) continue;
       orderedParts.push({ rawPart: {}, partAuto });
     }
@@ -164,24 +177,24 @@ for (const group of orderedGroups) {
       );
 
       const partInput = path.join(RAW_DIR, partAuto.fileName);
-      const partOutput = path.join(DATA_DIR, autoMainMetadata.id, `${partAuto.base}.opus`);
+      const partOutput = path.join(DATA_DIR, autoMetadata.main.id, `${partAuto.base}.opus`);
 
       await convertToOpus(partInput, partOutput);
       const partDuration = await ffprobeDuration(partOutput);
 
       const resolvedPart = {};
-      resolvedPart.src = `/data/${autoMainMetadata.id}/${partAuto.base}.opus`;
+      resolvedPart.src = `/data/${autoMetadata.main.id}/${partAuto.base}.opus`;
       if (rawPart.offset) resolvedPart.offset = rawPart.offset;
       resolvedPart.duration = partDuration;
       resolvedParts.push(resolvedPart);
     }
   }
 
-  const id = autoMainMetadata.id;
-  const version = Math.max(currentVersion, autoMainMetadata.version);
-  const title = rawMetadata.title ?? currentMetadata?.title ?? autoMainMetadata.id;
+  const id = autoMetadata.main.id;
+  const version = Math.max(currentVersion, autoMetadata.main.version);
+  const title = rawMetadata.title ?? currentMetadata?.title ?? autoMetadata.main.id;
   const tags = rawMetadata.tags ?? currentMetadata?.tags ?? [];
-  const src = `/data/${autoMainMetadata.id}/${autoMainMetadata.base}.opus`;
+  const src = `/data/${autoMetadata.main.id}/${autoMetadata.main.base}.opus`;
   const uploadTime = rawMetadata.uploadTime ?? currentMetadata?.uploadTime ?? new Date().toISOString().slice(0, 10);
   const updateTime = new Date().toISOString().slice(0, 10);
   const loopStart = rawMetadata?.time?.loopStart ?? currentMetadata?.time?.loopStart ?? 0;
@@ -203,7 +216,7 @@ for (const group of orderedGroups) {
   console.log('\n');
   await printDiff(currentMetadata, merged, chalk.green('No metadata changes'));
 
-  currentMetadataMap.set(autoMainMetadata.id, merged);
+  currentMetadataMap.set(autoMetadata.main.id, merged);
 }
 
 const finalDiscography = Array.from(currentMetadataMap.values());
