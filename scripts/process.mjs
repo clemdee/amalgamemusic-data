@@ -99,7 +99,30 @@ async function main() {
     autoGroupedMetadataMap.set(autoMetadata.id, group);
   }
 
-  for (const group of autoGroupedMetadataMap.values()) {
+  // ===== ORDER GROUPS BEFORE PROCESSING (NEW) =====
+  const orderedGroups = [];
+
+  // 1) existing tracks keep current order
+  for (const item of currentDiscography) {
+    const group = autoGroupedMetadataMap.get(item.id);
+    if (group) orderedGroups.push(group);
+  }
+
+  // 2) new tracks follow raw discography order
+  for (const item of rawDiscography) {
+    if (currentMetadataMap.has(item.id)) continue;
+    const group = autoGroupedMetadataMap.get(item.id);
+    if (group) orderedGroups.push(group);
+  }
+
+  // 3) orphan tracks (not listed in raw) go last
+  for (const [id, group] of autoGroupedMetadataMap) {
+    if (currentMetadataMap.has(id)) continue;
+    if (rawMetadataMap.has(id)) continue;
+    orderedGroups.push(group);
+  }
+
+  for (const group of orderedGroups) {
     if (!group.main) continue;
     const autoMainMetadata = group.main;
 
@@ -121,10 +144,21 @@ async function main() {
     const duration = await ffprobeDuration(outputPath);
 
     let resolvedParts = [];
-    if (rawMetadata.parts?.length > 0) {
-      for (const partAuto of group.parts.values()) {
-        const rawPart = rawMetadata.parts.find(part => part.name === partAuto.partName);
+    if (group.parts.size > 0) {
+      const orderedParts = [];
 
+      for (const rawPart of rawMetadata.parts) {
+        const partAuto = group.parts.get(rawPart.name);
+        if (!partAuto) continue;
+        orderedParts.push({ rawPart, partAuto });
+      }
+
+      for (const [name, partAuto] of group.parts) {
+        if (rawMetadata.parts?.some(p => p.name === name)) continue;
+        orderedParts.push({ rawPart: {}, partAuto });
+      }
+
+      for (const { rawPart, partAuto } of orderedParts) {
         console.log(
           chalk.magenta('\n', '   >>> '),
           chalk.black.bgCyan(partAuto.fileName, '\n'),
