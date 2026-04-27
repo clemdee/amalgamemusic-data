@@ -6,6 +6,12 @@
     "time": {
       "loopStart": 0,
       "loopEnd": 100
-    }
+    },
+    "parts": [
+      {
+        "name": "loop",
+        "offset": 0
+      }
+    ]
   }
 ]

@@ -3,7 +3,7 @@
 const RAW_DIR = 'raw';
 const DATA_DIR = 'data';
 const RAW_DISCO_FILE = path.join(RAW_DIR, 'discography.json');
-const CURRENT_DISCO_FILE = path.join(DATA_DIR, 'discography.json')
+const CURRENT_DISCO_FILE = path.join(DATA_DIR, 'discography.json');
 
 function stringify (json) {
   if (!json) return '';
@@ -22,7 +22,7 @@ async function printDiff (string1, string2, noDiffMessage = '') {
   }
 }
 
-async function readJsonIfExists(filePath, fallback) {
+async function tryReadJson(filePath, fallback) {
   try {
     const raw = await fs.readFile(filePath, 'utf8');
     return JSON.parse(raw);
@@ -32,11 +32,16 @@ async function readJsonIfExists(filePath, fallback) {
   }
 }
 
-async function parseTrackName(fileName) {
-  const ext = path.extname(fileName);
-  const base = path.basename(fileName, ext);
-  const match = base.match(/^(.*?)(?:_(\d+))?$/);
-  return { base, ext, id: match?.[1] ?? base, version: match?.[2] ? Number(match[2]) : 0 };
+async function parseAutoMetadata(fileName) {
+  const regex = /^(?<base>(?<id>[^_.]*)(?:_(?<version>\d*))?(?:_(?<partName>[^_.]*))?)\.(?<ext>.*?)$/;
+  const { base, id, version, partName, ext } = fileName.match(regex)?.groups ?? {};
+  return {
+    base,
+    id,
+    version: Number(version ?? 0),
+    partName,
+    ext
+  };
 }
 
 async function ffprobeDuration(filePath) {
@@ -53,77 +58,123 @@ async function convertToOpus(inputPath, outputPath) {
 async function main() {
   await fs.mkdir(DATA_DIR, { recursive: true });
 
-  const currentDiscography = await readJsonIfExists(CURRENT_DISCO_FILE, []);
-  const rawDiscography = await readJsonIfExists(RAW_DISCO_FILE, []);
+  const currentDiscography = await tryReadJson(CURRENT_DISCO_FILE, []);
+  const rawDiscography = await tryReadJson(RAW_DISCO_FILE, []);
 
   const currentMetadataMap = new Map(currentDiscography.map((item) => [item.id, item]));
   const rawMetadataMap = new Map(rawDiscography.map((item) => [item.id, item]));
 
   const rawFiles = await fs.readdir(RAW_DIR, { withFileTypes: true });
 
-  const autoMetadataMap = new Map();
+  // ===== GROUP FILES BY ID + VERSION =====
+  const autoGroupedMetadataMap = new Map();
+
   for (const rawFile of rawFiles) {
     if (!rawFile.isFile() || rawFile.name.endsWith('.json')) continue;
-    const autoMetadata = await parseTrackName(rawFile.name);
-    const currentAutoMetadata = autoMetadataMap.get(autoMetadata.id);
-    if (!currentAutoMetadata || autoMetadata.version > currentAutoMetadata.version) {
-      autoMetadataMap.set(autoMetadata.id, { fileName: rawFile.name, ...autoMetadata });
+    const autoMetadata = await parseAutoMetadata(rawFile.name);
+
+    const group = autoGroupedMetadataMap.get(autoMetadata.id) ?? { version: -1, main: null, parts: new Map() };
+
+    if (autoMetadata.version < group.version) continue;
+
+    if (autoMetadata.version > group.version) {
+      group.version = autoMetadata.version;
+      group.main = null;
+      group.parts = new Map();
     }
+
+    if (autoMetadata.partName) {
+      group.parts.set(autoMetadata.partName, {
+        fileName: rawFile.name,
+        ...autoMetadata,
+      });
+    }
+    else{
+      group.main = {
+        fileName: rawFile.name,
+        ...autoMetadata,
+      };
+    }
+
+    autoGroupedMetadataMap.set(autoMetadata.id, group);
   }
 
-  for (const autoMetadata of autoMetadataMap.values()) {
+  for (const group of autoGroupedMetadataMap.values()) {
+    if (!group.main) continue;
+    const autoMainMetadata = group.main;
+
     console.log(
       chalk.magenta('\n', '>> '),
-      chalk.black.bgCyan(autoMetadata.fileName, '\n')
+      chalk.black.bgCyan(autoMainMetadata.fileName, '\n'),
     );
 
-    const inputPath = path.join(RAW_DIR, autoMetadata.fileName);
-    const outputDir = path.join(DATA_DIR, autoMetadata.id);
-    const outputPath = path.join(outputDir, `${autoMetadata.base}.opus`);
+    const inputPath = path.join(RAW_DIR, autoMainMetadata.fileName);
+    const outputDir = path.join(DATA_DIR, autoMainMetadata.id);
+    const outputPath = path.join(outputDir, `${autoMainMetadata.base}.opus`);
 
-    const rawMetadata = rawMetadataMap.get(autoMetadata.id) ?? {};
-    const currentMetadata = currentMetadataMap.get(autoMetadata.id);
+    const rawMetadata = rawMetadataMap.get(autoMainMetadata.id) ?? {};
+    const currentMetadata = currentMetadataMap.get(autoMainMetadata.id);
     const currentVersion = Number(currentMetadata?.version ?? 0);
-    if (autoMetadata.version < currentVersion) continue;
+    if (autoMainMetadata.version < currentVersion) continue;
 
     await convertToOpus(inputPath, outputPath);
     const duration = await ffprobeDuration(outputPath);
 
-    const merged = {
-      id: autoMetadata.id,
-      version: Math.max(currentVersion, autoMetadata.version),
-      title: rawMetadata.title ?? currentMetadata?.title ?? autoMetadata.id,
-      tags: rawMetadata.tags ?? currentMetadata?.tags ?? [],
-      src: `/data/${autoMetadata.id}/${autoMetadata.base}.opus`,
-      uploadTime: rawMetadata.uploadTime ?? currentMetadata?.uploadTime ?? new Date().toISOString().slice(0, 10),
-      updateTime: new Date().toISOString().slice(0, 10),
-      time: {
-        duration,
-        loopStart: rawMetadata?.time?.loopStart ?? currentMetadata?.time?.loopStart ?? 0,
-        loopEnd: rawMetadata?.time?.loopEnd ?? currentMetadata?.time?.loopEnd ?? duration,
-      },
-      parts: rawMetadata.parts ?? currentMetadata?.parts ?? [],
-    };
+    let resolvedParts = [];
+    if (rawMetadata.parts?.length > 0) {
+      for (const partAuto of group.parts.values()) {
+        const rawPart = rawMetadata.parts.find(part => part.name === partAuto.partName);
 
-    if (merged.version === 0) delete merged.version;
-    if (merged.tags.length === 0) delete merged.tags;
-    if (merged.time.loopStart === 0) delete merged.time.loopStart;
-    if (merged.time.loopEnd === duration) delete merged.time.loopEnd;
-    if (merged.parts.length === 0) delete merged.parts;
+        console.log(
+          chalk.magenta('\n', '   >>> '),
+          chalk.black.bgCyan(partAuto.fileName, '\n'),
+        );
+
+        const partInput = path.join(RAW_DIR, partAuto.fileName);
+        const partOutput = path.join(DATA_DIR, autoMainMetadata.id, `${partAuto.base}.opus`);
+
+        await convertToOpus(partInput, partOutput);
+        const partDuration = await ffprobeDuration(partOutput);
+
+        const resolvedPart = {};
+        resolvedPart.src = `/data/${autoMainMetadata.id}/${partAuto.base}.opus`;
+        if (rawPart.offset) resolvedPart.offset = rawPart.offset;
+        resolvedPart.duration = partDuration;
+        resolvedParts.push(resolvedPart);
+      }
+    }
+
+    const id = autoMainMetadata.id;
+    const version = Math.max(currentVersion, autoMainMetadata.version);
+    const title = rawMetadata.title ?? currentMetadata?.title ?? autoMainMetadata.id;
+    const tags = rawMetadata.tags ?? currentMetadata?.tags ?? [];
+    const src = `/data/${autoMainMetadata.id}/${autoMainMetadata.base}.opus`;
+    const uploadTime = rawMetadata.uploadTime ?? currentMetadata?.uploadTime ?? new Date().toISOString().slice(0, 10);
+    const updateTime = new Date().toISOString().slice(0, 10);
+    const loopStart = rawMetadata?.time?.loopStart ?? currentMetadata?.time?.loopStart ?? 0;
+    const loopEnd = rawMetadata?.time?.loopEnd ?? currentMetadata?.time?.loopEnd ?? duration;
+
+    const merged = {}
+    merged.id = id;
+    if (version !== 0) merged.version = version;
+    merged.title = title;
+    if (tags.length !== 0) merged.tags = tags;
+    merged.src = src;
+    merged.uploadTime = uploadTime;
+    merged.updateTime = updateTime;
+    merged.time = { duration };
+    if (loopStart !== 0) merged.time.loopStart = loopStart;
+    if (loopEnd !== duration) merged.time.loopEnd = loopEnd;
+    if (resolvedParts.length !== 0) merged.parts = resolvedParts;
 
     console.log('\n');
-    await printDiff(
-      currentMetadata,
-      merged,
-      chalk.green('No metadata changes'),
-    );
+    await printDiff(currentMetadata, merged, chalk.green('No metadata changes'));
 
-    currentMetadataMap.set(autoMetadata.id, merged);
+    currentMetadataMap.set(autoMainMetadata.id, merged);
   }
 
   const finalDiscography = Array.from(currentMetadataMap.values());
-
-  // await fs.writeFile(CURRENT_DISCO_FILE, stringify(finalDiscography));
+  await fs.writeFile(CURRENT_DISCO_FILE, stringify(finalDiscography));
   console.log('\n', chalk.cyan('discography.json updated'));
 }
 
