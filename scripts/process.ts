@@ -1,5 +1,6 @@
 #!/usr/bin/env zx
 
+import type { Dirent } from 'fs';
 import 'zx/globals';
 
 interface RawMusicPart {
@@ -103,7 +104,7 @@ async function printDiff (string1: any, string2: any, noDiffMessage = '') {
   }
 }
 
-function isAudioFile (file: any) {
+function isAudioFile (file: Dirent<string>) {
   return file.isFile() && !file.name.endsWith('.json');
 }
 

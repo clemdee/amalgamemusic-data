@@ -10,6 +10,7 @@
     "process": "zx scripts/process.ts"
   },
   "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
     "@types/node": "^25.6.0",
     "typescript": "^6.0.3"
   }
