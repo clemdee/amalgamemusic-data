@@ -20,6 +20,12 @@ You can also manually trigger the file processing by running:
 pnpm install
 
 pnpm process
+
+# dry run (no changes made on file system)
+pnpm process --dry
+
+# remove raw files after processing (used by CI)
+pnpm process --cleanup
 ```
 
 Note: `process.ts` was made with the help of AI

@@ -58,8 +58,19 @@ interface AutoMetadata {
     parts: Map<string, FileMetadata>
 }
 
+const dryRunFlag = argv.dry;
+const cleanupFlag = argv.cleanup;
+
+if (dryRunFlag) {
+  console.log(
+    chalk.black.bgYellow('(!)'),
+    chalk.yellow('DRY RUN - No changes written on disk\n'),
+  );
+}
+
 const RAW_DIR = 'raw';
 const DATA_DIR = 'data';
+const OUTPUT_DIR = dryRunFlag ? tmpdir('data') : DATA_DIR;
 const RAW_DISCO_FILE = path.join(RAW_DIR, 'discography.json');
 const CURRENT_DISCO_FILE = path.join(DATA_DIR, 'discography.json');
 
@@ -213,7 +224,7 @@ const processMusicParts = async (rawMetadata: RawMusicMetadata | undefined, auto
     );
 
     const partInput = path.join(RAW_DIR, partAuto.fileName);
-    const partOutput = path.join(DATA_DIR, autoMetadata.main.id, `${partAuto.base}.opus`);
+    const partOutput = path.join(OUTPUT_DIR, autoMetadata.main.id, `${partAuto.base}.opus`);
 
     await convertToOpus(partInput, partOutput);
     const partDuration = await ffprobeDuration(partOutput);
@@ -231,9 +242,9 @@ const processMusicParts = async (rawMetadata: RawMusicMetadata | undefined, auto
 // ---
 
 const rawFiles = await fs.readdir(RAW_DIR, { withFileTypes: true });
+const rawAudioFiles = rawFiles.filter(isAudioFile);
 
-for (const rawFile of rawFiles) {
-  if (!isAudioFile(rawFile)) continue;
+for (const rawFile of rawAudioFiles) {
   const rawFileMetadata = parseRawFileMetadata(rawFile.name);
   updateAutoMetadata(rawFileMetadata);
 }
@@ -253,7 +264,7 @@ for (const autoMetadata of sortedAutoMetadata) {
   if (autoMetadata.main.version < currentVersion) continue;
 
   const inputPath = path.join(RAW_DIR, autoMetadata.main.fileName);
-  const outputPath = path.join(DATA_DIR, autoMetadata.main.id, `${autoMetadata.main.base}.opus`);
+  const outputPath = path.join(OUTPUT_DIR, autoMetadata.main.id, `${autoMetadata.main.base}.opus`);
 
   await convertToOpus(inputPath, outputPath);
   const duration = await ffprobeDuration(outputPath);
@@ -289,6 +300,22 @@ for (const autoMetadata of sortedAutoMetadata) {
   currentMetadataMap.set(autoMetadata.main.id, merged);
 }
 
+// Write changes to discography
 const finalDiscography = Array.from(currentMetadataMap.values());
-await fs.writeFile(CURRENT_DISCO_FILE, stringify(finalDiscography));
-console.log('\n', chalk.cyan('discography.json updated'));
+if (!dryRunFlag) {
+  await fs.writeFile(CURRENT_DISCO_FILE, stringify(finalDiscography));
+  console.log('\n');
+  console.log(chalk.cyan('discography.json updated'));
+}
+
+// Cleanup raw files
+if (!dryRunFlag && cleanupFlag) {
+  console.log('\n');
+  console.log(chalk.red.underline('Cleaning raw files'));
+
+  for (const rawFile of rawAudioFiles) {
+    const rawFilePath = path.join(rawFile.parentPath, rawFile.name);
+    console.log(chalk.gray('-', rawFilePath));
+    fs.remove(rawFilePath);
+  }
+}
