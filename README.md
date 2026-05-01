@@ -1,8 +1,8 @@
 # amalgamemusic-data
 
-Repository for managing music data for [https://amalgamemusic.com](amalgamemusic.com)
+Repository for managing music assets for [amalgamemusic.com]([amalgamemusic.com](https://amalgamemusic.com))
 
-Musics in this repository are licensed under [https://creativecommons.org/licenses/by-sa/4.0/?ref=chooser-v1](CC BY-SA 4.0), except when stated otherwise.
+Music in this repository is licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/?ref=chooser-v1)
 
 ## Installation / Usage
 
@@ -12,21 +12,27 @@ cd amalgamemusic-data
 ```
 
 Place new music in the `raw` folder, update the `raw/discography.json` metadata if needed.
-Commit change and push to trigger the CI/CD.
 
 You can also manually trigger the file processing by running:
 ```sh
 # install dependencies
 pnpm install
 
-pnpm process
+# Process files
+pnpm run process
+pnpm run process --dry # dry run (no changes made on file system)
+pnpm run process --cleanup # remove raw files after processing
 
-# dry run (no changes made on file system)
-pnpm process --dry
+# Process files and commit
+pnpm run commit
 
-# remove raw files after processing (used by CI)
-pnpm process --cleanup
+# Process files, commit, and deploy
+pnpm run publish
 ```
 
-Note: `process.ts` was made with the help of AI
+> [!WARNING]
+> Commits made in the prod branch will trigger the deploy CI.
+
+> [!NOTE]
+> Scripts were made with the help of AI
 
