@@ -316,14 +316,16 @@
   },
   {
     "id": "66",
+    "version": 7,
     "title": "Owen was Who?",
     "tags": [
       "cover"
     ],
-    "src": "/data/66/66.opus",
+    "src": "/data/66/66_7.opus",
     "uploadTime": "2025-07-21",
+    "updateTime": "2026-05-01",
     "time": {
-      "duration": 127.059433
+      "duration": 148.531083
     }
   },
   {
@@ -645,5 +647,69 @@
       "duration": 68.024354,
       "loopEnd": 65.08
     }
+  },
+  {
+    "id": "201",
+    "version": 2,
+    "title": "Rolling",
+    "tags": [
+      "electro",
+      "experimental"
+    ],
+    "src": "/data/201/201_2.opus",
+    "uploadTime": "2026-05-01",
+    "updateTime": "2026-05-01",
+    "time": {
+      "duration": 85.847042,
+      "loopEnd": 82.787
+    }
+  },
+  {
+    "id": "221",
+    "version": 2,
+    "title": "Riffraff",
+    "tags": [
+      "electro",
+      ".highlight:3"
+    ],
+    "src": "/data/221/221_2.opus",
+    "uploadTime": "2026-05-01",
+    "updateTime": "2026-05-01",
+    "time": {
+      "duration": 65.077521,
+      "loopEnd": 62.981
+    }
+  },
+  {
+    "id": "216",
+    "version": 3,
+    "title": "Nightfall journey",
+    "tags": [
+      "electro"
+    ],
+    "src": "/data/216/216_3.opus",
+    "uploadTime": "2026-05-01",
+    "updateTime": "2026-05-01",
+    "time": {
+      "duration": 152.724396,
+      "loopStart": 52.84,
+      "loopEnd": 123.3
+    },
+    "parts": [
+      {
+        "src": "/data/216/216_3_start.opus",
+        "duration": 64.656729
+      },
+      {
+        "src": "/data/216/216_3_loop.opus",
+        "offset": 52.84,
+        "duration": 82.265688
+      },
+      {
+        "src": "/data/216/216_3_end.opus",
+        "offset": 123.3,
+        "duration": 29.421667
+      }
+    ]
   }
 ]
