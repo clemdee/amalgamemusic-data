@@ -7,7 +7,9 @@
     "zx": "^8.0.0"
   },
   "scripts": {
-    "process": "zx scripts/process.ts"
+    "process": "zx scripts/process.ts",
+    "commit": "zx scripts/commit.ts",
+    "publish": "zx scripts/publish.ts"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",

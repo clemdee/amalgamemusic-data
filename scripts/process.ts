@@ -313,9 +313,14 @@ if (!dryRunFlag && cleanupFlag) {
   console.log('\n');
   console.log(chalk.red.underline('Cleaning raw files'));
 
+  // Remove audio
   for (const rawFile of rawAudioFiles) {
     const rawFilePath = path.join(rawFile.parentPath, rawFile.name);
     console.log(chalk.gray('-', rawFilePath));
     fs.remove(rawFilePath);
   }
+
+  // Reset discography
+  const exampleDiscoFile = path.join(RAW_DIR, 'discography.example.json');
+  $`cp ${ exampleDiscoFile } ${RAW_DISCO_FILE}`
 }
