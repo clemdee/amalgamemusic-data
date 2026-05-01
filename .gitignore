@@ -1,1 +1,3 @@
 node_modules
+raw
+!raw/discography.example.json
