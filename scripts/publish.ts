@@ -6,6 +6,8 @@ $.env.FORCE_COLOR = "1";
 
 await $`pnpm commit`;
 
+console.log('\n');
+console.log('\n');
 console.log(
   chalk.black.bgRed('(!)'),
   chalk.red('PUSHING CHANGES TO PRODUCTION\n'),
