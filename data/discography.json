@@ -701,16 +701,18 @@
     },
     "parts": [
       {
-        "src": "/data/216/216_5_end.opus",
-        "duration": 28.699167
+        "src": "/data/216/216_5_start.opus",
+        "duration": 64.645271
       },
       {
         "src": "/data/216/216_5_loop.opus",
+        "offset": 52.84,
         "duration": 82.259958
       },
       {
-        "src": "/data/216/216_5_start.opus",
-        "duration": 64.645271
+        "src": "/data/216/216_5_end.opus",
+        "offset": 123.3,
+        "duration": 28.699167
       }
     ]
   },
